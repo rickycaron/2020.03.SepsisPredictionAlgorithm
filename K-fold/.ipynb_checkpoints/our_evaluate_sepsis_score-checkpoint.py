@@ -9,6 +9,7 @@
 # directory containing files with predictions, and 'scores.psv' (optional) is a
 # collection of scores for the predictions.
 
+""
 # The evaluate_performance function computes a normalized utility score for a cohort
 # of patients along with several traditional scoring metrics. It takes y_test, model.predict(x_test_impute),model.predict_prob(x_test_impute), y_test[patient_id] as the input
 # used in the KFold fucntion 
