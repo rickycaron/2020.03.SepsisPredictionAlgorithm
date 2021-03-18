@@ -67,7 +67,7 @@ def ReadDatafromFile(filename=""):
 # Last modified RZ - 11-3-21 11:12
 
 def clearAllDatasets(X_train, X_test, y_train, y_test):
-    if len(X_train) != 0:
+    if ( len(X_train) != 0  or len(X_test) !=0 or len(y_train) !=0 or len(y_test) !=0 ):
 #     if not X_train.empty:
         X_train = X_train[0:0]
 #     if not X_test.empty:
@@ -77,17 +77,6 @@ def clearAllDatasets(X_train, X_test, y_train, y_test):
 #     if not y_test.empty:
         y_test = y_test[0:0]
     return X_train, X_test, y_train, y_test
-        
-# def clearAllDatasets():
-#     global X_train, X_test, y_train, y_test
-#     if not X_train.empty: 
-#         X_train = X_train[0:0]
-#     if not X_test.empty:
-#         X_test = X_test[0:0]
-#     if not y_train.empty:
-#         y_train = y_train[0:0]
-#     if not y_test.empty:
-#         y_test = y_test[0:0]
 
 
 # -
