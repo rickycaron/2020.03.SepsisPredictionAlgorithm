@@ -11,54 +11,34 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import time
 from sklearn.impute import KNNImputer
 
+# defining the columnbs that are used for the features (X) and for the SepsisLabels (y)
+X_columns = ['HR', 'O2Sat', 'Temp', 'SBP', 'MAP', 'DBP', 'Resp', 'EtCO2','BaseExcess', 'HCO3', 'FiO2', 'pH', 
+             'PaCO2', 'SaO2', 'AST', 'BUN','Alkalinephos', 'Calcium', 'Chloride', 'Creatinine', 'Bilirubin_direct',
+             'Glucose', 'Lactate', 'Magnesium', 'Phosphate', 'Potassium','Bilirubin_total', 'TroponinI', 'Hct', 
+             'Hgb', 'PTT', 'WBC','Fibrinogen', 'Platelets', 'Age', 'Gender', 'Unit1', 'Unit2','HospAdmTime',
+             'ICULOS', 'Patient_id', 'time']
+y_columns = ['Patient_id', 'SepsisLabel']
 
 
-#Function read dat from file
-# Global initialization, get all the data from file and generate all the needed variable
-# input
-    ## Filename: path of the file to be used for main code
-# Last modified JV - 10-3-21 19:25
+#Function for writing the different idSEts to a file
+#input
+    ##Isets: array with 10 index array[10] which contains the 10-fold splitting patients
+    ##KforKFold: var which indicate in how many parts the "big patientsID's" is splitted
+# Last modified JV - 18-3-21 10:45
 
-def ReadDatafromFile(filename=""):
-    #filename = 'data.csv' # use raw dataset
-    originalData = pd.read_csv(filename) # read csv data into DataFrame var raw
-    print("Data size:",originalData.shape)
-    Original_Uniq_ID= np.unique(originalData['Patient_id'])
-    Uniq_ID = Original_Uniq_ID.copy()
-    print('Patient id size:',len(Uniq_ID))
-    X_columns = ['HR', 'O2Sat', 'Temp', 'SBP', 'MAP', 'DBP', 'Resp', 'EtCO2','BaseExcess', 'HCO3', 'FiO2', 'pH',
-                 'PaCO2', 'SaO2', 'AST', 'BUN','Alkalinephos', 'Calcium', 'Chloride', 'Creatinine', 'Bilirubin_direct',
-                 'Glucose', 'Lactate', 'Magnesium', 'Phosphate', 'Potassium','Bilirubin_total', 'TroponinI', 'Hct',
-                 'Hgb', 'PTT', 'WBC','Fibrinogen', 'Platelets', 'Age', 'Gender', 'Unit1', 'Unit2','HospAdmTime',
-                 'ICULOS', 'Patient_id', 'time']
-    y_columns = ['Patient_id', 'SepsisLabel']
-    # Initialize the empty array X_train, X_test, y_train, y_test
-    X_train = pd.DataFrame(columns = X_columns)
-    X_test = pd.DataFrame(columns = X_columns)
-    y_train = pd.DataFrame(columns = y_columns)
-    y_test = pd.DataFrame(columns = y_columns)
-    # Below are the lists for KNN results
+def writePatientsIDtoFile(idSets, KforKFold):
+    Twrite = time.time()
+    open("test.txt", "w").close() # clear contents of existing file
+    for i in range(KforKFold):
+        splitted = " ".join( repr(e) for e in idSets[i])
+        file1 = open("test.txt","a")
+        file1.write("\n\n")
+        file1.write(str("[" +splitted+"]"))
+        file1.write("\n\n")
+        file1.close()
+    print("Time for writing id to file:", round(time.time()- Twrite,3))
 
-    KNN_UtilityScore_mean = []
-    KNN_UtilityScore_std = []
-
-    KNN_F1Score_mean = []
-    KNN_F1Score_std = []
-
-    KNN_auroc_mean = []
-    KNN_auprc_mean = []
-
-    KNN_accuracy_mean = []
-    KNN_accuracy_std = []
-
-    KNN_positiveprediction_mean = []
-    KNN_baseline_mean = [ ]
-    KNN_total_Time= [ ]
-
-
-    fillmethod =""
-
-# # Funcions that are used for data splitting and inseide the KFold function
+## Funcions that are used for data splitting and inseide the KFold function
 
 # +
 #this function will clear everything in the training and test dataset
@@ -130,34 +110,35 @@ def KNN_reset():
 
 # Function to generate the Training dataset
 # input: 
-    #PatientIds: The patient_id which are going to be used for creating the training dataset
+    # test_patienIds: The  test patient_id which should not be included/be used for creating the training dataset
+    # X_train, y_train: this are the array's which are used to use the generate train features(X) and labels (y)
 # output: 
     ##X_train: all features of patient_id equal to patientsIds, 
     ###y_train: the sepsislabels of patients corresponding to patientIds
-# Last modified JV - 10-3-21 19:30
-def generateTrainDataSet(patienIds):
-    global X_train, y_train
-    for i in patienIds:
-        X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
+# Last modified JV - 18-3-21 10:30
+def generateTrainDataSet(test_patienIds, X_train, y_train):
+    # selecting data from patients with who's patientId is not in test_patienIds
+    train_data= originalData[~(originalData.Patient_id.isin(test_patienIds))] 
+    X_train = train_data[X_columns]
+    y_train = train_data[y_columns]
     return X_train, y_train
 
 
 #Function to generate the test dataset
 # input: 
     ##PatientIds: The patient_id's which are going to be used for creating test dataset (data of patients where patient_id = patienIds)
+    ## X_test, y_test: this are the array's which are used to use the generate test features(X) and labels (y)
 # out:
     ##X_test: all features of patient_id equal to patientsIds, 
     ##y_test: the sepsislabels of patients corresponding to patientIds
-# last modified JV - 10-3-21 19:30
-def generateTestDataSet(patienIds):
-    global X_test, y_test
-    for i in patienIds:
-#     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
-        X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
+# Last modified JV - 18-3-21 10:30
+def generateTestDataSet(patienIds, X_test, y_test):
+    #print("test_patienIds: \n", patienIds)
+    # selecting data from patients with who's patientId is represent in test_patienIds
+    test_data = originalData[originalData['Patient_id'].isin(patienIds)]
+    X_test = test_data[X_columns]
+    y_test = test_data[y_columns]
     return X_test, y_test
-
 
 
 # Functions for Variable Manipulation
@@ -177,7 +158,7 @@ def CalcMean_Std(Data):
 
 # This function is for filling the NaN value of the data linearly, only for one column at a time
 # inputs
-    ## patientColumn:
+    ## patientColumn: the column that is going to filled to eliminated the missing values in the column
     ## patientIndexSet:
     ## forwardFilling: 
         #True: perform forward filling for the mediam missing part,just copy the value of the same patient before NaN value
