@@ -270,7 +270,7 @@ def KNNfilling(trainData,testData,K= 5, fillmethod=""):
     x_train_impute=imputer.transform(trainData)
     x_test_impute=imputer.transform(testData)
     fillmethod= "KnnFill"
-    return x_train_impute, x_test_impute, fillmethod   #This may cause error when the data is very large in size
+    return x_train_impute, x_test_impute, fillmethod  
 
 
 # -
