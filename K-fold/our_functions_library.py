@@ -10,6 +10,8 @@ import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import time
 from sklearn.impute import KNNImputer
+import numba
+from numba import jit, cuda
 
 
 # # Funcions that are used for data splitting and inseide the KFold function
@@ -258,7 +260,7 @@ def MeanFilling(trainData,testData, fillmethod, overall = True):
 #                 patientColumn.loc[NaNbeginIndex - 1: NaNendIndex] = newValues
 #         i += 1
 #     return patientColumn
-
+@jit(parallel=True)
 def fillNaNValueColumnPatient(patientColumn):
     if patientColumn.isnull().sum() == len(patientColumn):
         # this whole column is missing
