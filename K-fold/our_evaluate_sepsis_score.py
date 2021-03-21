@@ -42,6 +42,94 @@ import pandas as pd
 #labels is Ytest the true value of sepsis+ patient_id
 #predictions is predicted sepsis labels
 #probabilities is probality
+def evaluate_performance_dask(labels,predictions,probabilities,patientids,idSet):
+    # print("****************************************************************************")
+    # print(type(labels))
+    # print(labels)
+    # print("*****************************")
+    # print(type(predictions))
+    # print(predictions)
+    # print("*****************************")
+    # print(type(patientids))
+    # print(patientids)
+    # print("*****************************")
+    # print(type(probabilities))
+    # print(probabilities)
+    # print("*****************************")
+    if ( not( len(labels) == len(predictions) == len(probabilities) )):
+        print("The predicted data is not the same in size! Evaluation function will stop here!" )
+        return
+    # Set parameters.
+    label_header       = 'SepsisLabel'
+    prediction_header  = 'PredictedLabel'
+    probability_header = 'PredictedProbability'
+    dt_early   = -12
+    dt_optimal = -6
+    dt_late    = 3
+    max_u_tp = 1
+    min_u_fn = -2
+    u_fp     = -0.05
+    u_tn     = 0
+    
+    auroc, auprc        = compute_auc(labels, probabilities)
+    accuracy, f_measure = compute_accuracy_f_measure(labels, predictions)
+    
+    patientids = patientids.astype('int')
+    patientdata = patientids.reset_index()
+#     print(patientids)
+#     patientdata = patientdata.join(pd.Series(labels.flatten(),name='labels'))
+    patientdata = patientdata.join(labels.rename('labels'))
+    patientdata = patientdata.join(pd.Series(predictions.flatten(),name='predictions'))
+    patientdata = patientdata.drop("index",1)
+    # print("After the joining:")
+    # print(patientdata.columns)
+    # print(patientdata)
+#     uniq_ids = np.unique(patientdata['Patient_id']) 
+    num_patients = len(idSet)
+    dataByPatient = patientdata.groupby('Patient_id')
+
+    #print(uniq_ids)
+    # Compute utility.
+    observed_utilities = np.zeros(num_patients)
+    best_utilities     = np.zeros(num_patients)
+    worst_utilities    = np.zeros(num_patients)
+    inaction_utilities = np.zeros(num_patients)
+
+    for i in range(num_patients):
+        k = idSet[i]
+        # print(" for the patient of id:",k)
+        # print(dataByPatient.get_group(k))
+
+        labels = dataByPatient.get_group(k).loc[:, 'labels'].to_numpy()
+        num_rows          = len(labels)
+        observed_predictions = dataByPatient.get_group(k).loc[:, 'predictions'].to_numpy()
+
+        #print("labels",labels)
+        #print("observered_prediction",observed_predictions)
+
+        best_predictions     = np.zeros(num_rows)
+        worst_predictions    = np.zeros(num_rows)
+        inaction_predictions = np.zeros(num_rows)
+
+        if np.any(labels):
+            t_sepsis = np.argmax(labels) - dt_optimal
+            best_predictions[max(0, t_sepsis + dt_early) : min(t_sepsis + dt_late + 1, num_rows)] = 1
+        worst_predictions = 1 - best_predictions
+
+        observed_utilities[i] = compute_prediction_utility(labels, observed_predictions, dt_early, dt_optimal, dt_late, max_u_tp, min_u_fn, u_fp, u_tn)
+        best_utilities[i]     = compute_prediction_utility(labels, best_predictions, dt_early, dt_optimal, dt_late, max_u_tp, min_u_fn, u_fp, u_tn)
+        worst_utilities[i]    = compute_prediction_utility(labels, worst_predictions, dt_early, dt_optimal, dt_late, max_u_tp, min_u_fn, u_fp, u_tn)
+        inaction_utilities[i] = compute_prediction_utility(labels, inaction_predictions, dt_early, dt_optimal, dt_late, max_u_tp, min_u_fn, u_fp, u_tn)
+
+    unnormalized_observed_utility = np.sum(observed_utilities)
+    unnormalized_best_utility     = np.sum(best_utilities)
+    unnormalized_worst_utility    = np.sum(worst_utilities)
+    unnormalized_inaction_utility = np.sum(inaction_utilities)
+
+    normalized_observed_utility = (unnormalized_observed_utility - unnormalized_inaction_utility) / (unnormalized_best_utility - unnormalized_inaction_utility)
+
+    return auroc, auprc, accuracy, f_measure, normalized_observed_utility
+
 
 def evaluate_performance(labels,predictions,probabilities,patientids):
     if ( not( len(labels) == len(predictions) == len(probabilities) )):
