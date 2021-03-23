@@ -43,19 +43,20 @@ import pandas as pd
 #predictions is predicted sepsis labels
 #probabilities is probality
 def evaluate_performance_dask(labels,predictions,probabilities,patientids,idSet):
-    # print("****************************************************************************")
-    # print(type(labels))
-    # print(labels)
-    # print("*****************************")
-    # print(type(predictions))
-    # print(predictions)
-    # print("*****************************")
-    # print(type(patientids))
-    # print(patientids)
-    # print("*****************************")
-    # print(type(probabilities))
-    # print(probabilities)
-    # print("*****************************")
+    
+    print("****************************************************************************")
+    print("Labels type : ", type(labels))
+    print(labels)
+    print("*****************************")
+    print("Predictions type : ",type(predictions))
+    print(predictions)
+    print("*****************************")
+    print("Probabilities type : ",type(probabilities))
+    print(probabilities)
+    print("*****************************")
+    print("Patient ids type : ",type(patientids))
+    print(patientids)
+    print("*****************************")
     if ( not( len(labels) == len(predictions) == len(probabilities) )):
         print("The predicted data is not the same in size! Evaluation function will stop here!" )
         return

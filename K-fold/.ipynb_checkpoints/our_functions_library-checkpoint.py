@@ -10,53 +10,23 @@ import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import time
 from sklearn.impute import KNNImputer
+import numba
+from numba import jit, cuda
 
 
 
-#Function read dat from file
-# Global initialization, get all the data from file and generate all the needed variable
-# input
-    ## Filename: path of the file to be used for main code
-# Last modified JV - 10-3-21 19:25
 
-def ReadDatafromFile(filename=""):
-    #filename = 'data.csv' # use raw dataset
-    originalData = pd.read_csv(filename) # read csv data into DataFrame var raw
-    print("Data size:",originalData.shape)
-    Original_Uniq_ID= np.unique(originalData['Patient_id'])
-    Uniq_ID = Original_Uniq_ID.copy()
-    print('Patient id size:',len(Uniq_ID))
-    X_columns = ['HR', 'O2Sat', 'Temp', 'SBP', 'MAP', 'DBP', 'Resp', 'EtCO2','BaseExcess', 'HCO3', 'FiO2', 'pH',
-                 'PaCO2', 'SaO2', 'AST', 'BUN','Alkalinephos', 'Calcium', 'Chloride', 'Creatinine', 'Bilirubin_direct',
-                 'Glucose', 'Lactate', 'Magnesium', 'Phosphate', 'Potassium','Bilirubin_total', 'TroponinI', 'Hct',
-                 'Hgb', 'PTT', 'WBC','Fibrinogen', 'Platelets', 'Age', 'Gender', 'Unit1', 'Unit2','HospAdmTime',
-                 'ICULOS', 'Patient_id', 'time']
-    y_columns = ['Patient_id', 'SepsisLabel']
-    # Initialize the empty array X_train, X_test, y_train, y_test
-    X_train = pd.DataFrame(columns = X_columns)
-    X_test = pd.DataFrame(columns = X_columns)
-    y_train = pd.DataFrame(columns = y_columns)
-    y_test = pd.DataFrame(columns = y_columns)
-    # Below are the lists for KNN results
-
-    KNN_UtilityScore_mean = []
-    KNN_UtilityScore_std = []
-
-    KNN_F1Score_mean = []
-    KNN_F1Score_std = []
-
-    KNN_auroc_mean = []
-    KNN_auprc_mean = []
-
-    KNN_accuracy_mean = []
-    KNN_accuracy_std = []
-
-    KNN_positiveprediction_mean = []
-    KNN_baseline_mean = [ ]
-    KNN_total_Time= [ ]
-
-
-    fillmethod =""
+def WritePatientIdsToFile(idSets, KforKFold):
+    Twrite = time.time()
+    open("test.txt", "w").close() # clear contents of existing file
+    for i in range(KforKFold):
+        splitted = " ".join( repr(e) for e in idSets[i])
+        file1 = open("test.txt","a")
+        file1.write("\n\n")
+        file1.write(str("[" +splitted+"]"))
+        file1.write("\n\n")
+        file1.close()
+    print("Time for writing id to file:", round(time.time()- Twrite,2))
 
 # # Funcions that are used for data splitting and inseide the KFold function
 
@@ -118,36 +88,46 @@ def KNN_reset():
     KNN_baseline_mean.clear()
     KNN_total_Time.clear()
 
-# Function to generate the Training dataset
 # input: 
     #PatientIds: The patient_id which are going to be used for creating the training dataset
 # output: 
     ##X_train: all features of patient_id equal to patientsIds, 
     ###y_train: the sepsislabels of patients corresponding to patientIds
-# Last modified JV - 10-3-21 19:30
-def generateTrainDataSet(patienIds):
-    global X_train, y_train
-    for i in patienIds:
-        X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
-    return X_train, y_train
-
-
-#Function to generate the test dataset
+# last modified RZ - 23-3-21 19:30
+# def generateTrainDataSet(patienIds):
+#     global X_train, y_train
+#     for i in patienIds:
+#         X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
+#         y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
+#     return X_train, y_train
 # input: 
     ##PatientIds: The patient_id's which are going to be used for creating test dataset (data of patients where patient_id = patienIds)
 # out:
     ##X_test: all features of patient_id equal to patientsIds, 
     ##y_test: the sepsislabels of patients corresponding to patientIds
-# last modified JV - 10-3-21 19:30
-def generateTestDataSet(patienIds):
-    global X_test, y_test
-    for i in patienIds:
-#     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
-        X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
-    return X_test, y_test
+# last modified RZ - 23-3-21 19:30
+# def generateTestDataSet(patienIds):
+#     global X_test, y_test
+#     for i in patienIds:
+# #     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
+#         X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
+#         y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
+#     return X_test, y_test
 
+# Function to generate the Training dataset
+
+
+def WritePatientIdsToFile(idSets, KforKFold):
+    Twrite = time.time()
+    open("test.txt", "w").close() # clear contents of existing file
+    for i in range(KforKFold):
+        splitted = " ".join( repr(e) for e in idSets[i])
+        file1 = open("test.txt","a")
+        file1.write("\n\n")
+        file1.write(str("[" +splitted+"]"))
+        file1.write("\n\n")
+        file1.close()
+    print("Time for writing id to file:", round(time.time()- Twrite,2))
 
 
 # Functions for Variable Manipulation
@@ -164,6 +144,48 @@ def CalcMean_Std(Data):
 
 
 # # Functions for missing Data imputation
+
+
+# Functions below are filling the missing data
+# This function perform the KNN imputation for missing data filling
+# in this function, the missing values of the train/test dataset are calculated by means of KNN imputer 
+# Last modified JV - 10-3-21 19:30
+
+def KNNfilling(trainData,testData,K= 5, fillmethod=""):
+    imputer = KNNImputer(n_neighbors = K)
+    #imputer = FaissKNeighbors(k=K)
+    # fit imputer on training data
+    imputer.fit(trainData)
+    #transfer
+    # Impute the missing data of the train/test data using the imputer "model"
+#     x_train_impute=imputer.transform(trainData).round(3)
+#     x_test_impute=imputer.transform(testData).round(3)
+    x_train_impute=imputer.transform(trainData)
+    x_test_impute=imputer.transform(testData)
+    fillmethod= "KnnFill"
+    return x_train_impute, x_test_impute, fillmethod  
+
+
+# 
+#Last Modified: Rui 10/3 3:35pm, can fill the missing value both by overall and train mean value  
+#fill the missing data by the overall mean value 
+def MeanFilling(trainData,testData, fillmethod, overall = True):
+    if(overall):
+        data_concat = pd.concat((trainData, testData))
+        fillingmean = data_concat.mean().round(2)  
+        print("fill with overall data mean")
+    else:
+        fillingmean = trainData.mean().round(2)
+        print("fill with training data mean")
+    train_mean_filled = trainData.fillna(fillingmean)
+    test_mean_filled = testData.fillna(fillingmean)
+    fillmethod= "MeanFill"
+    #print(train_mean_filled) 
+    #print(test_mean_filled)
+    return train_mean_filled, test_mean_filled, fillmethod
+
+
+
 
 # This function is for filling the NaN value of the data linearly, only for one column at a time
 # inputs
@@ -253,44 +275,18 @@ def fillNaNValueColumnPatient(patientColumn, patientIndexSet, forwardFilling=Fal
         i += 1
     return patientColumn
 
-# Functions below are filling the missing data
-# This function perform the KNN imputation for missing data filling
-# in this function, the missing values of the train/test dataset are calculated by means of KNN imputer 
-# Last modified JV - 10-3-21 19:30
-
-def KNNfilling(trainData,testData,K= 5, fillmethod=""):
-    imputer = KNNImputer(n_neighbors = K)
-    #imputer = FaissKNeighbors(k=K)
-    # fit imputer on training data
-    imputer.fit(trainData)
-    #transfer
-    # Impute the missing data of the train/test data using the imputer "model"
-#     x_train_impute=imputer.transform(trainData).round(3)
-#     x_test_impute=imputer.transform(testData).round(3)
-    x_train_impute=imputer.transform(trainData)
-    x_test_impute=imputer.transform(testData)
-    fillmethod= "KnnFill"
-    return x_train_impute, x_test_impute, fillmethod   #This may cause error when the data is very large in size
-
-
-# -
-
-#Last Modified: Rui 10/3 3:35pm, can fill the missing value both by overall and train mean value  
-#fill the missing data by the overall mean value 
-def MeanFilling(trainData,testData, fillmethod, overall = True):
-    if(overall):
-        data_concat = pd.concat((trainData, testData))
-        fillingmean = data_concat.mean().round(2)  
-        print("fill with overall data mean")
-    else:
-        fillingmean = trainData.mean().round(2)
-        print("fill with training data mean")
-    train_mean_filled = trainData.fillna(fillingmean)
-    test_mean_filled = testData.fillna(fillingmean)
-    fillmethod= "MeanFill"
-    #print(train_mean_filled) 
-    #print(test_mean_filled)
-    return train_mean_filled, test_mean_filled, fillmethod
+# @jit(parallel=True)
+# def fillNaNValueColumnPatient(patientColumn):
+#     if patientColumn.isnull().sum() == len(patientColumn):
+#         # this whole column is missing
+#         patientColumn = patientColumn.fillna(0)
+#     elif patientColumn.isnull().sum() == len(patientColumn) -1 :
+#         # this whole column only contains one data 
+#         patientColumn = patientColumn.ffill().bfill()
+#     else:
+#         patientColumn = patientColumn.interpolate(method='linear',limit_direction ='both')
+#         patientColumn = patientColumn.ffill().bfill()
+#     return patientColumn
 
 
 # This methods fills the whole datarame with linear imputation, here we assume that the data for each patient linearly over time
@@ -319,13 +315,17 @@ def linearFillingAll(oridata, fillingChoice=0, forwardFilling=False):
         copy = patientData
         # for every column
         for idx in copy:
-            copy[idx] = fillNaNValueColumnPatient(copy[idx], patientIndex, forwardFilling)
+            copy[idx] = fillNaNValueColumnPatient(copy[idx])#, patientIndex, forwardFilling)
         filleddata.loc[filleddata['Patient_id'] == Pid] = copy
     print("The filling choice is of number:", fillingChoice)
+    missing = filleddata.isna().sum()*100/ len(filleddata)
+    print(missing)
     if fillingChoice == 1:
+        print("fillingChoice =1")
         fillmethod += str('0')
         filleddata = filleddata.fillna(0)
     elif fillingChoice == 2:
+        print("fillingChoice =2")
         fillmethod += str('mean')
         filleddata = filleddata.fillna(filleddata.mean().round(2))
     print("total time:", round(time.time() - start, 2), "sec")
