@@ -93,26 +93,12 @@ def KNN_reset():
 # output: 
     ##X_train: all features of patient_id equal to patientsIds, 
     ###y_train: the sepsislabels of patients corresponding to patientIds
-# last modified RZ - 23-3-21 19:30
-# def generateTrainDataSet(patienIds):
-#     global X_train, y_train
-#     for i in patienIds:
-#         X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
-#         y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
-#     return X_train, y_train
-# input: 
+
     ##PatientIds: The patient_id's which are going to be used for creating test dataset (data of patients where patient_id = patienIds)
 # out:
     ##X_test: all features of patient_id equal to patientsIds, 
     ##y_test: the sepsislabels of patients corresponding to patientIds
-# last modified RZ - 23-3-21 19:30
-# def generateTestDataSet(patienIds):
-#     global X_test, y_test
-#     for i in patienIds:
-# #     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
-#         X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
-#         y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
-#     return X_test, y_test
+
 
 # Function to generate the Training dataset
 
