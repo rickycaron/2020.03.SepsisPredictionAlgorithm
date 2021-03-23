@@ -14,6 +14,20 @@ import numba
 from numba import jit, cuda
 
 
+
+
+def WritePatientIdsToFile(idSets, KforKFold):
+    Twrite = time.time()
+    open("test.txt", "w").close() # clear contents of existing file
+    for i in range(KforKFold):
+        splitted = " ".join( repr(e) for e in idSets[i])
+        file1 = open("test.txt","a")
+        file1.write("\n\n")
+        file1.write(str("[" +splitted+"]"))
+        file1.write("\n\n")
+        file1.close()
+    print("Time for writing id to file:", round(time.time()- Twrite,2))
+
 # # Funcions that are used for data splitting and inseide the KFold function
 
 # +
@@ -74,36 +88,46 @@ def KNN_reset():
     KNN_baseline_mean.clear()
     KNN_total_Time.clear()
 
-# Function to generate the Training dataset
 # input: 
     #PatientIds: The patient_id which are going to be used for creating the training dataset
 # output: 
     ##X_train: all features of patient_id equal to patientsIds, 
     ###y_train: the sepsislabels of patients corresponding to patientIds
-# Last modified JV - 10-3-21 19:30
-def generateTrainDataSet(patienIds):
-    global X_train, y_train
-    for i in patienIds:
-        X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
-    return X_train, y_train
-
-
-#Function to generate the test dataset
+# last modified RZ - 23-3-21 19:30
+# def generateTrainDataSet(patienIds):
+#     global X_train, y_train
+#     for i in patienIds:
+#         X_train = X_train.append(dataByPatient.get_group(i).loc[:, X_columns])
+#         y_train = y_train.append(dataByPatient.get_group(i).loc[:, y_columns])
+#     return X_train, y_train
 # input: 
     ##PatientIds: The patient_id's which are going to be used for creating test dataset (data of patients where patient_id = patienIds)
 # out:
     ##X_test: all features of patient_id equal to patientsIds, 
     ##y_test: the sepsislabels of patients corresponding to patientIds
-# last modified JV - 10-3-21 19:30
-def generateTestDataSet(patienIds):
-    global X_test, y_test
-    for i in patienIds:
-#     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
-        X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
-        y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
-    return X_test, y_test
+# last modified RZ - 23-3-21 19:30
+# def generateTestDataSet(patienIds):
+#     global X_test, y_test
+#     for i in patienIds:
+# #     print('Patient_id',i,':\n',dataByPatient.get_group(i),'\n')
+#         X_test = X_test.append(dataByPatient.get_group(i).loc[:, X_columns])
+#         y_test = y_test.append(dataByPatient.get_group(i).loc[:, y_columns]) 
+#     return X_test, y_test
 
+# Function to generate the Training dataset
+
+
+def WritePatientIdsToFile(idSets, KforKFold):
+    Twrite = time.time()
+    open("test.txt", "w").close() # clear contents of existing file
+    for i in range(KforKFold):
+        splitted = " ".join( repr(e) for e in idSets[i])
+        file1 = open("test.txt","a")
+        file1.write("\n\n")
+        file1.write(str("[" +splitted+"]"))
+        file1.write("\n\n")
+        file1.close()
+    print("Time for writing id to file:", round(time.time()- Twrite,2))
 
 
 # Functions for Variable Manipulation
@@ -250,7 +274,7 @@ def MeanFilling(trainData,testData, fillmethod, overall = True):
 #                 patientColumn.loc[NaNbeginIndex - 1: NaNendIndex] = newValues
 #         i += 1
 #     return patientColumn
-@jit(parallel=True)
+# @jit(parallel=True)
 def fillNaNValueColumnPatient(patientColumn):
     if patientColumn.isnull().sum() == len(patientColumn):
         # this whole column is missing
@@ -293,6 +317,8 @@ def linearFillingAll(oridata, fillingChoice=0, forwardFilling=False):
             copy[idx] = fillNaNValueColumnPatient(copy[idx])#, patientIndex, forwardFilling)
         filleddata.loc[filleddata['Patient_id'] == Pid] = copy
     print("The filling choice is of number:", fillingChoice)
+    missing = filleddata.isna().sum()*100/ len(filleddata)
+    print(missing)
     if fillingChoice == 1:
         print("fillingChoice =1")
         fillmethod += str('0')
