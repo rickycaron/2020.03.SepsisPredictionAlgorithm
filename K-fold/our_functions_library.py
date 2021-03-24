@@ -171,109 +171,49 @@ def MeanFilling(trainData,testData, fillmethod, overall = True):
     return train_mean_filled, test_mean_filled, fillmethod
 
 
-
-
-# This function is for filling the NaN value of the data linearly, only for one column at a time
-# inputs
-    ## patientColumn:
-    ## patientIndexSet:
-    ## forwardFilling: 
-        #True: perform forward filling for the mediam missing part,just copy the value of the same patient before NaN value
-        #False: perform linear imputation filling for the missing part
-#output
-    ## patientColumn: return the linearly filled dataColumn
-# Last modified JV - 10-3-21 19:40
-
-# def fillNaNValueColumnPatient(patientColumn, patientIndexSet, forwardFilling=False):
-#     rowNum = patientColumn.shape[0]
-#     beginIndex = patientIndexSet[0]
-#     endIndex = patientIndexSet[-1]
-#     # generate the true-false table for a column
-#     columnIsNull = patientColumn.isnull()
-#     # print(columnIsNull)
-#     # the first task is to fill all the beginging NaN
-#     i = 0
-#     firstIndex = beginIndex
-#     found = False
-#     # print("Before the filling")
-#     # print(patientColumn)
-#     # found the first non-nan value
-#     while (i < rowNum and (not found)):
-#         if not (columnIsNull[i + beginIndex]):
-#             found = True
-#             firstIndex = i + beginIndex
-#             break
-#         i += 1
-#     # print(idx,firstIndex)
-#     # After the search
-#     if found == False:
-#         # the whole column is NaN, just leave it untouched, we will fill all these kind of missing values togther later on
-#         # print(idx,"This whole column is NaN, fill it with 0 or global average value")
-#         return patientColumn  # because it's all NaN, no need to proceed in this function
-#     else:
-#         # fill all the first nan value with the first not-nan value you find
-#         patientColumn.loc[beginIndex:firstIndex] = patientColumn[firstIndex]
-
-#         # the second task is to fill all the ending NaN
-#     i = rowNum - 1
-#     lastIndex = endIndex
-#     found = False
-#     # print(columnIsNull)
-#     # found the last non-nan value
-#     while (i >= 0 and (not found)):
-#         if not (columnIsNull[beginIndex + i]):
-#             found = True
-#             lastIndex = beginIndex + i
-#             break
-#         i -= 1
-#     # print(idx,lastIndex)
-#     # After the search
-#     if found == True:
-#         # fill all the first nan value with the first not-nan value you find
-#         patientColumn.loc[lastIndex: endIndex] = patientColumn[lastIndex]
-
-#         # third task is to fill all the middle missing data
-#     # we must generate the isnullcolumn again here
-#     columnIsNull = patientColumn.isnull()
-#     # print(columnIsNull)
-#     inSearchForANaN = True
-#     NaNbeginIndex = beginIndex  # is NaN
-#     NaNendIndex = endIndex  # is not NaN
-#     i = 0
-#     # get into the loop
-#     while (i < rowNum):
-#         if (inSearchForANaN and columnIsNull[beginIndex + i]):
-#             inSearchForANaN = False
-#             NaNbeginIndex = beginIndex + i
-#             # print(beginIndex)
-#         elif (not inSearchForANaN and not columnIsNull[beginIndex + i]):
-#             inSearchForANaN = True
-#             NaNendIndex = beginIndex + i
-#             # print(endIndex)
-#             if forwardFilling == True:
-#                 patientColumn.loc[NaNbeginIndex: NaNendIndex - 1] = patientColumn[NaNbeginIndex - 1]
-#             elif forwardFilling == False:
-#                 sliceNum = NaNendIndex - NaNbeginIndex + 2
-#                 newValues = np.linspace(patientColumn[NaNbeginIndex - 1], patientColumn[NaNendIndex], sliceNum).round(2)
-#                 # print(newValues)
-#                 # print(patientColumn [ NaNbeginIndex-1 : NaNendIndex+1])
-#                 patientColumn.loc[NaNbeginIndex - 1: NaNendIndex] = newValues
-#         i += 1
-#     return patientColumn
-
-# @jit(parallel=True)
-def fillNaNValueColumnPatient(patientColumn):
+def fillNaNValueColumnPatient(patientColumn,meanValue = 0):   
     if patientColumn.isnull().sum() == len(patientColumn):
         # this whole column is missing
-        patientColumn = patientColumn.fillna(0)
-    elif patientColumn.isnull().sum() == len(patientColumn) -1 :
-        # this whole column only contains one data 
+        patientColumn = patientColumn.fillna( meanValue )
+    elif patientColumn.isnull().sum() == len(patientColumn) -1 : 
         patientColumn = patientColumn.ffill().bfill()
     else:
         patientColumn = patientColumn.interpolate(method='linear',limit_direction ='both')
         patientColumn = patientColumn.ffill().bfill()
     return patientColumn
 
+def linearFillingAllSeparate(oridata, Uniq_ID, forwardFilling=False):
+    start = time.time()
+    fillmethod = ""
+    if (forwardFilling == False):
+        fillmethod += 'Linear_'
+        print("Filling using Linear interpolation")
+    elif (forwardFilling == True):
+        fillmethod += 'Forward_'
+        print("filling using Forward filling") 
+
+    print("Fill with missing column with healty/sepsis mean")
+    fillmethod += str('healty/sepsis mean')
+    filledData = pd.DataFrame()
+    healthyMeans = oridata[oridata['SepsisLabel'] == False].mean().round(2)
+    sepsisMeans = oridata[oridata['SepsisLabel'] == True].mean().round(2)
+    for Pid in Uniq_ID:
+        patientData = oridata.loc[oridata['Patient_id'] == Pid]
+        healtyPart = patientData[ patientData['SepsisLabel'] == False]
+        sepsisPart = patientData[ patientData['SepsisLabel'] == True]
+        for col in healtyPart:
+            #f0r each column 
+            healtyPart[col] = fillNaNValueColumnPatient(healtyPart[col], meanValue = healthyMeans[col])
+        for col in sepsisPart:
+            #f0r each column 
+            sepsisPart[col] = fillNaNValueColumnPatient(sepsisPart[col], meanValue = sepsisMeans[col])
+        filledData = filledData.append(healtyPart)
+        filledData = filledData.append(sepsisPart)
+    oridata = filledData
+    missing = oridata.isna().sum()*100/ len(oridata)
+    print(missing)
+    print("total time for filling with missing column with healty/sepsis mean:", round(time.time() - start, 2), "sec")
+    return filledData
 
 # This methods fills the whole datarame with linear imputation, here we assume that the data for each patient linearly over time
 #Inputs
@@ -633,3 +573,91 @@ def plotKNNResultFigure(KValuestart,KvalueEnd,yValues,title,xlabel,ylabel):
     print("Maximum ",ylabel,":-",max(yValues),"at K =", 1 + yValues.index(max(yValues)))
 
 # # Functions for Results Evaluation
+
+# This function is for filling the NaN value of the data linearly, only for one column at a time
+# inputs
+    ## patientColumn:
+    ## patientIndexSet:
+    ## forwardFilling: 
+        #True: perform forward filling for the mediam missing part,just copy the value of the same patient before NaN value
+        #False: perform linear imputation filling for the missing part
+#output
+    ## patientColumn: return the linearly filled dataColumn
+# Last modified JV - 10-3-21 19:40
+
+# def fillNaNValueColumnPatient(patientColumn, patientIndexSet, forwardFilling=False):
+#     rowNum = patientColumn.shape[0]
+#     beginIndex = patientIndexSet[0]
+#     endIndex = patientIndexSet[-1]
+#     # generate the true-false table for a column
+#     columnIsNull = patientColumn.isnull()
+#     # print(columnIsNull)
+#     # the first task is to fill all the beginging NaN
+#     i = 0
+#     firstIndex = beginIndex
+#     found = False
+#     # print("Before the filling")
+#     # print(patientColumn)
+#     # found the first non-nan value
+#     while (i < rowNum and (not found)):
+#         if not (columnIsNull[i + beginIndex]):
+#             found = True
+#             firstIndex = i + beginIndex
+#             break
+#         i += 1
+#     # print(idx,firstIndex)
+#     # After the search
+#     if found == False:
+#         # the whole column is NaN, just leave it untouched, we will fill all these kind of missing values togther later on
+#         # print(idx,"This whole column is NaN, fill it with 0 or global average value")
+#         return patientColumn  # because it's all NaN, no need to proceed in this function
+#     else:
+#         # fill all the first nan value with the first not-nan value you find
+#         patientColumn.loc[beginIndex:firstIndex] = patientColumn[firstIndex]
+
+#         # the second task is to fill all the ending NaN
+#     i = rowNum - 1
+#     lastIndex = endIndex
+#     found = False
+#     # print(columnIsNull)
+#     # found the last non-nan value
+#     while (i >= 0 and (not found)):
+#         if not (columnIsNull[beginIndex + i]):
+#             found = True
+#             lastIndex = beginIndex + i
+#             break
+#         i -= 1
+#     # print(idx,lastIndex)
+#     # After the search
+#     if found == True:
+#         # fill all the first nan value with the first not-nan value you find
+#         patientColumn.loc[lastIndex: endIndex] = patientColumn[lastIndex]
+
+#         # third task is to fill all the middle missing data
+#     # we must generate the isnullcolumn again here
+#     columnIsNull = patientColumn.isnull()
+#     # print(columnIsNull)
+#     inSearchForANaN = True
+#     NaNbeginIndex = beginIndex  # is NaN
+#     NaNendIndex = endIndex  # is not NaN
+#     i = 0
+#     # get into the loop
+#     while (i < rowNum):
+#         if (inSearchForANaN and columnIsNull[beginIndex + i]):
+#             inSearchForANaN = False
+#             NaNbeginIndex = beginIndex + i
+#             # print(beginIndex)
+#         elif (not inSearchForANaN and not columnIsNull[beginIndex + i]):
+#             inSearchForANaN = True
+#             NaNendIndex = beginIndex + i
+#             # print(endIndex)
+#             if forwardFilling == True:
+#                 patientColumn.loc[NaNbeginIndex: NaNendIndex - 1] = patientColumn[NaNbeginIndex - 1]
+#             elif forwardFilling == False:
+#                 sliceNum = NaNendIndex - NaNbeginIndex + 2
+#                 newValues = np.linspace(patientColumn[NaNbeginIndex - 1], patientColumn[NaNendIndex], sliceNum).round(2)
+#                 # print(newValues)
+#                 # print(patientColumn [ NaNbeginIndex-1 : NaNendIndex+1])
+#                 patientColumn.loc[NaNbeginIndex - 1: NaNendIndex] = newValues
+#         i += 1
+#     return patientColumn
